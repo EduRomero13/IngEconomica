@@ -4,6 +4,7 @@ import numpy as np
 import numpy_financial as npf
 import plotly.graph_objects as go
 import plotly.express as px
+from data_manager import DataManager
 
 # Configuración de la página
 st.set_page_config(
@@ -11,18 +12,9 @@ st.set_page_config(
     page_icon="💧",
     layout="wide"
 )
-if "initialized" not in st.session_state:
-    st.session_state.update({
-        "costo_tanque": 750.0,
-        "costo_bomba": 600.0,
-        "costo_instalacion": 400.0,
-        "vida_util": 8,
-        "ahorro_anual": 700.0,
-        "mantenimiento_anual": 100.0,
-        "tmar_porcentaje": 10.0,
-        "tmar": 0.10,
-        "initialized": True
-    })
+
+# Inicializar datos usando DataManager
+DataManager.initialize()
 
 # Funciones de cálculo
 def calcular_tasa_efectiva(tasa_nominal, periodos):
@@ -59,6 +51,8 @@ def calcular_payback(inversion_inicial, flujos_netos):
     for i, flujo in enumerate(flujos_netos):
         acumulado += flujo
         if acumulado >= inversion_inicial:
+            if flujo == 0:  # Prevenir división por cero
+                return i + 1
             return i + 1 + (inversion_inicial - (acumulado - flujo)) / flujo
     return None
 
@@ -70,6 +64,8 @@ def calcular_payback_descontado(inversion_inicial, flujos_netos, tasa):
         acumulado += vp_flujo
         if acumulado >= inversion_inicial:
             flujo_anterior = acumulado - vp_flujo
+            if vp_flujo == 0:  # Prevenir división por cero
+                return i + 1
             return i + 1 + (inversion_inicial - flujo_anterior) / vp_flujo
     return None
 
@@ -79,15 +75,18 @@ st.markdown("### Objetivo: Determinar la viabilidad económica de la inversión 
 
 # Sidebar
 st.sidebar.header("🔧 Menú de Navegación")
-st.sidebar.selectbox(
+
+# Asegurar que menu_opcion esté inicializado
+if "menu_opcion" not in st.session_state:
+    st.session_state["menu_opcion"] = "💰 Datos de Inversión"
+
+opcion = st.sidebar.selectbox(
     "Selecciona una opción:",
     ["📝 Inicio", "📖 Glosario", "📚 Manual de Uso", "💰 Datos de Inversión",
      "📊 Análisis Financiero", "🔍 Análisis de Sensibilidad",
      "⚖️ Análisis Multicriterio", "📈 Resultados Integrales"],
     key="menu_opcion"
 )
-
-opcion = st.session_state["menu_opcion"]
 
 # ==================== INICIO ====================
 if opcion == "📝 Inicio":
@@ -722,6 +721,8 @@ elif opcion == "📚 Manual de Uso":
 # ==================== DATOS DE INVERSIÓN ====================
 elif opcion == "💰 Datos de Inversión":
     st.header("💰 Configuración de Datos de Inversión")
+    
+    st.info("ℹ️ **Los valores que ingreses aquí se guardarán automáticamente y se mantendrán al cambiar entre páginas.**")
 
     st.subheader("🔧 Costos Iniciales")
     col1, col2, col3 = st.columns(3)
@@ -732,7 +733,8 @@ elif opcion == "💰 Datos de Inversión":
             min_value=0.0,
             step=50.0,
             key="costo_tanque",
-            value=st.session_state["costo_tanque"]
+            on_change=DataManager.update_inversion_inicial,
+            help="Este valor se guardará automáticamente"
         )
 
     with col2:
@@ -741,7 +743,8 @@ elif opcion == "💰 Datos de Inversión":
             min_value=0.0,
             step=50.0,
             key="costo_bomba",
-            value=st.session_state["costo_bomba"]
+            on_change=DataManager.update_inversion_inicial,
+            help="Este valor se guardará automáticamente"
         )
 
     with col3:
@@ -750,15 +753,12 @@ elif opcion == "💰 Datos de Inversión":
             min_value=0.0,
             step=50.0,
             key="costo_instalacion",
-            value=st.session_state["costo_instalacion"]
+            on_change=DataManager.update_inversion_inicial,
+            help="Este valor se guardará automáticamente"
         )
 
-    # Cálculo desde session_state (fuente única de verdad)
-    st.session_state["inversion_inicial"] = (
-        st.session_state["costo_tanque"]
-        + st.session_state["costo_bomba"]
-        + st.session_state["costo_instalacion"]
-    )
+    # Actualizar inversión inicial
+    DataManager.update_inversion_inicial()
 
     st.success(
         f"### 💵 Inversión Inicial Total: S/ {st.session_state['inversion_inicial']:,.2f}"
@@ -775,7 +775,7 @@ elif opcion == "💰 Datos de Inversión":
             min_value=1,
             max_value=20,
             key="vida_util",
-            value=st.session_state["vida_util"]
+            help="Este valor se guardará automáticamente"
         )
 
     with col2:
@@ -784,7 +784,7 @@ elif opcion == "💰 Datos de Inversión":
             min_value=0.0,
             step=50.0,
             key="ahorro_anual",
-            value=st.session_state["ahorro_anual"]
+            help="Este valor se guardará automáticamente"
         )
 
     with col3:
@@ -793,7 +793,7 @@ elif opcion == "💰 Datos de Inversión":
             min_value=0.0,
             step=10.0,
             key="mantenimiento_anual",
-            value=st.session_state["mantenimiento_anual"]
+            help="Este valor se guardará automáticamente"
         )
 
     with col4:
@@ -803,23 +803,38 @@ elif opcion == "💰 Datos de Inversión":
             max_value=50.0,
             step=0.5,
             key="tmar_porcentaje",
-            value=st.session_state["tmar_porcentaje"]
+            on_change=DataManager.update_tmar,
+            help="Este valor se guardará automáticamente"
         )
 
-    # TMAR en decimal (persistente)
-    st.session_state["tmar"] = st.session_state["tmar_porcentaje"] / 100
+    # Actualizar TMAR
+    DataManager.update_tmar()
 
     st.divider()
 
     st.subheader("🏦 Financiamiento (Opcional)")
-    st.session_state["financiado"] = st.checkbox(
+    st.checkbox(
         "¿El proyecto será financiado?",
-        value=st.session_state.get("financiado", False)
+        key="financiado",
+        help="Este valor se guardará automáticamente"
     )
+
+    st.divider()
+    
+    # Validación de datos
+    errores = DataManager.validate_data()
+    if errores:
+        st.warning("⚠️ **Advertencias:**")
+        for error in errores:
+            st.warning(f"• {error}")
 
     st.divider()
 
     st.subheader("📊 Resumen de Datos Ingresados")
+    
+    # Obtener datos actuales
+    datos = DataManager.get_all_data()
+    
     df_resumen = pd.DataFrame({
         "Concepto": [
             "Tanque de Agua",
@@ -833,19 +848,29 @@ elif opcion == "💰 Datos de Inversión":
             "TMAR"
         ],
         "Valor": [
-            f"S/ {st.session_state['costo_tanque']:,.2f}",
-            f"S/ {st.session_state['costo_bomba']:,.2f}",
-            f"S/ {st.session_state['costo_instalacion']:,.2f}",
-            f"S/ {st.session_state['inversion_inicial']:,.2f}",
-            f"S/ {st.session_state['ahorro_anual']:,.2f}",
-            f"S/ {st.session_state['mantenimiento_anual']:,.2f}",
-            f"S/ {st.session_state['ahorro_anual'] - st.session_state['mantenimiento_anual']:,.2f}",
-            f"{st.session_state['vida_util']} años",
-            f"{st.session_state['tmar']*100:.2f}%"
+            f"S/ {datos['costo_tanque']:,.2f}",
+            f"S/ {datos['costo_bomba']:,.2f}",
+            f"S/ {datos['costo_instalacion']:,.2f}",
+            f"S/ {datos['inversion_inicial']:,.2f}",
+            f"S/ {datos['ahorro_anual']:,.2f}",
+            f"S/ {datos['mantenimiento_anual']:,.2f}",
+            f"S/ {datos['ahorro_anual'] - datos['mantenimiento_anual']:,.2f}",
+            f"{datos['vida_util']} años",
+            f"{datos['tmar']*100:.2f}%"
         ]
     })
 
-    st.dataframe(df_resumen, width="stretch", hide_index=True)
+    st.dataframe(df_resumen, width='stretch', hide_index=True)
+    
+    # Botón para resetear valores
+    st.divider()
+    col1, col2, col3 = st.columns([1, 1, 2])
+    with col1:
+        if st.button("🔄 Resetear a valores por defecto", type="secondary"):
+            DataManager.reset_to_defaults()
+            st.rerun()
+    with col2:
+        st.success("✅ Todos los cambios se guardan automáticamente")
 
 
 # ==================== ANÁLISIS FINANCIERO ====================
