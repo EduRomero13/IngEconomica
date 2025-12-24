@@ -76,16 +76,13 @@ st.markdown("### Objetivo: Determinar la viabilidad económica de la inversión 
 # Sidebar
 st.sidebar.header("🔧 Menú de Navegación")
 
-# Asegurar que menu_opcion esté inicializado
-if "menu_opcion" not in st.session_state:
-    st.session_state["menu_opcion"] = "💰 Datos de Inversión"
-
 opcion = st.sidebar.selectbox(
     "Selecciona una opción:",
     ["📝 Inicio", "📖 Glosario", "📚 Manual de Uso", "💰 Datos de Inversión",
      "📊 Análisis Financiero", "🔍 Análisis de Sensibilidad",
      "⚖️ Análisis Multicriterio", "📈 Resultados Integrales"],
-    key="menu_opcion"
+    key="menu_opcion",
+    index=0
 )
 
 # ==================== INICIO ====================
@@ -728,34 +725,37 @@ elif opcion == "💰 Datos de Inversión":
     col1, col2, col3 = st.columns(3)
 
     with col1:
-        st.number_input(
+        costo_tanque = st.number_input(
             "Tanque de Agua (1,100 L) - S/",
             min_value=0.0,
             step=50.0,
-            key="costo_tanque",
-            on_change=DataManager.update_inversion_inicial,
+            value=st.session_state["costo_tanque"],
             help="Este valor se guardará automáticamente"
         )
+        if costo_tanque != st.session_state["costo_tanque"]:
+            st.session_state["costo_tanque"] = costo_tanque
 
     with col2:
-        st.number_input(
+        costo_bomba = st.number_input(
             "Bomba Eléctrica ½ HP - S/",
             min_value=0.0,
             step=50.0,
-            key="costo_bomba",
-            on_change=DataManager.update_inversion_inicial,
+            value=st.session_state["costo_bomba"],
             help="Este valor se guardará automáticamente"
         )
+        if costo_bomba != st.session_state["costo_bomba"]:
+            st.session_state["costo_bomba"] = costo_bomba
 
     with col3:
-        st.number_input(
+        costo_instalacion = st.number_input(
             "Tuberías e Instalación - S/",
             min_value=0.0,
             step=50.0,
-            key="costo_instalacion",
-            on_change=DataManager.update_inversion_inicial,
+            value=st.session_state["costo_instalacion"],
             help="Este valor se guardará automáticamente"
         )
+        if costo_instalacion != st.session_state["costo_instalacion"]:
+            st.session_state["costo_instalacion"] = costo_instalacion
 
     # Actualizar inversión inicial
     DataManager.update_inversion_inicial()
@@ -770,42 +770,49 @@ elif opcion == "💰 Datos de Inversión":
     col1, col2, col3, col4 = st.columns(4)
 
     with col1:
-        st.number_input(
+        vida_util = st.number_input(
             "Vida Útil (años)",
             min_value=1,
             max_value=20,
-            key="vida_util",
+            value=st.session_state["vida_util"],
             help="Este valor se guardará automáticamente"
         )
+        if vida_util != st.session_state["vida_util"]:
+            st.session_state["vida_util"] = vida_util
 
     with col2:
-        st.number_input(
+        ahorro_anual = st.number_input(
             "Ahorro Anual Estimado - S/",
             min_value=0.0,
             step=50.0,
-            key="ahorro_anual",
+            value=st.session_state["ahorro_anual"],
             help="Este valor se guardará automáticamente"
         )
+        if ahorro_anual != st.session_state["ahorro_anual"]:
+            st.session_state["ahorro_anual"] = ahorro_anual
 
     with col3:
-        st.number_input(
+        mantenimiento_anual = st.number_input(
             "Mantenimiento Anual - S/",
             min_value=0.0,
             step=10.0,
-            key="mantenimiento_anual",
+            value=st.session_state["mantenimiento_anual"],
             help="Este valor se guardará automáticamente"
         )
+        if mantenimiento_anual != st.session_state["mantenimiento_anual"]:
+            st.session_state["mantenimiento_anual"] = mantenimiento_anual
 
     with col4:
-        st.number_input(
+        tmar_porcentaje = st.number_input(
             "TMAR (%)",
             min_value=0.0,
             max_value=50.0,
             step=0.5,
-            key="tmar_porcentaje",
-            on_change=DataManager.update_tmar,
+            value=st.session_state["tmar_porcentaje"],
             help="Este valor se guardará automáticamente"
         )
+        if tmar_porcentaje != st.session_state["tmar_porcentaje"]:
+            st.session_state["tmar_porcentaje"] = tmar_porcentaje
 
     # Actualizar TMAR
     DataManager.update_tmar()
@@ -813,11 +820,13 @@ elif opcion == "💰 Datos de Inversión":
     st.divider()
 
     st.subheader("🏦 Financiamiento (Opcional)")
-    st.checkbox(
+    financiado = st.checkbox(
         "¿El proyecto será financiado?",
-        key="financiado",
+        value=st.session_state["financiado"],
         help="Este valor se guardará automáticamente"
     )
+    if financiado != st.session_state["financiado"]:
+        st.session_state["financiado"] = financiado
 
     st.divider()
     
@@ -861,6 +870,9 @@ elif opcion == "💰 Datos de Inversión":
     })
 
     st.dataframe(df_resumen, width='stretch', hide_index=True)
+    
+    # Hacer backup cada vez que se muestra esta página
+    DataManager.backup_data()
     
     # Botón para resetear valores
     st.divider()

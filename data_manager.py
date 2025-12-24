@@ -30,13 +30,10 @@ class DataManager:
     @staticmethod
     def initialize():
         """Inicializa session_state con valores por defecto si no existen"""
-        # Intentar restaurar desde backup primero (ANTES de todo)
-        DataManager.restore_from_backup()
-        
-        # Solo inicializar valores que NO existen (preserva cambios del usuario)
-        for key, value in DataManager.DEFAULTS.items():
+        # Solo inicializar valores que no existen (primera vez)
+        for key, default_value in DataManager.DEFAULTS.items():
             if key not in st.session_state:
-                st.session_state[key] = value
+                st.session_state[key] = default_value
         
         # Valores calculados (siempre actualizar)
         if "tmar_porcentaje" in st.session_state:
@@ -50,9 +47,6 @@ class DataManager:
             )
         
         st.session_state["data_initialized"] = True
-        
-        # Hacer backup de los datos
-        DataManager.backup_data()
     
     @staticmethod
     def backup_data():
@@ -82,13 +76,11 @@ class DataManager:
             st.session_state.get("costo_bomba", 0) +
             st.session_state.get("costo_instalacion", 0)
         )
-        DataManager.backup_data()
     
     @staticmethod
     def update_tmar():
         """Actualiza TMAR en formato decimal"""
         st.session_state["tmar"] = st.session_state.get("tmar_porcentaje", 10.0) / 100
-        DataManager.backup_data()
     
     @staticmethod
     def get_value(key, default=None):
